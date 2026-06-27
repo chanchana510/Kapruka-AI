@@ -313,11 +313,11 @@ function App() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-mobile md:px-margin-desktop h-16 bg-deep-purple shadow-lg">
-        <div className="flex items-center gap-2">
+      <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center gap-x-4 px-4 sm:px-6 md:px-8 h-16 bg-deep-purple shadow-lg">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <img alt="Kapruka" className="h-8 md:h-10 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZn0Mxv0J-tKxyh7PoZXz5YG8T0Zlc--njZTW9jWTxjZaghgd90UNXOJeV76H9qrSkATHLT3XYn_qTjO8uX3iGxAGN-5oljPqhEMzF0al_dGF56y1E5fh4gFEWzzrmvp0dAYnU4jDCKFrH_01zZ75lPQ-tVyrlvbslANesGEZOdy1i2YbLmhC9mcPPdN4gmMX6qgpeB_5EO1jK9vXcTbjYTb2xrLzZB2nQY64bg2idNMrT1FIDqN8d6rpxKdFADLMGc-VECcUquAY" />
         </div>
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           <button
             onClick={() => {
               try {
@@ -328,25 +328,25 @@ function App() {
               setIsVoiceMode(prev => !prev);
             }}
             title="Toggle Voice"
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-all cursor-pointer shadow-sm text-white"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-all cursor-pointer shadow-sm text-white flex-shrink-0"
           >
             <span className="text-lg">{isVoiceMode ? '🔊' : '🔇'}</span>
           </button>
           <button
             onClick={() => setShowTechStack(prev => !prev)}
             title="Behind the Scenes"
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-all cursor-pointer shadow-sm text-white"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-all cursor-pointer shadow-sm text-white flex-shrink-0"
           >
             <span className="text-lg">🚀</span>
           </button>
           <button 
             onClick={handleNewChat}
             title="New Chat"
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-all cursor-pointer shadow-sm text-white"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-all cursor-pointer shadow-sm text-white flex-shrink-0"
           >
             <span className="material-symbols-outlined text-white">add</span>
           </button>
-          <div className="relative w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-all cursor-pointer shadow-sm" onClick={() => setIsCheckoutOpen(prev => !prev)} title="Shopping Cart">
+          <div className="relative w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-all cursor-pointer shadow-sm flex-shrink-0" onClick={() => setIsCheckoutOpen(prev => !prev)} title="Shopping Cart">
             <span className="material-symbols-outlined text-white">shopping_cart</span>
             {cartItemCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-accent-yellow text-on-secondary-fixed text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-deep-purple">
@@ -374,7 +374,7 @@ function App() {
       )}
 
       {/* 🔮 Glassmorphism App Layout */}
-      <div className="flex w-full overflow-hidden min-h-[calc(100vh-64px)] mt-16 relative">
+      <div className="flex flex-col h-screen w-full overflow-hidden relative">
         {/* Premium Mesh Background Glow */}
         <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-purple-200/30 rounded-full blur-[120px] pointer-events-none z-0" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-pink-200/20 rounded-full blur-[120px] pointer-events-none z-0" />
@@ -406,12 +406,6 @@ function App() {
           cart={cart}
           updateQuantity={handleUpdateQuantity}
         />
-
-        <div className="fixed bottom-24 right-4 md:hidden z-40">
-          <button className="w-14 h-14 bg-accent-yellow text-deep-purple rounded-full shadow-2xl flex items-center justify-center animate-bounce" onClick={() => setIsCheckoutOpen(true)}>
-            <span className="material-symbols-outlined" style={{fontVariationSettings: "'FILL' 1"}}>shopping_bag</span>
-          </button>
-        </div>
 
         {!isChatStarted && (
           <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/20 backdrop-blur-sm overflow-y-auto transition-opacity duration-500 ${isWelcomeVisible ? 'opacity-100' : 'opacity-0'}`}>

@@ -106,22 +106,79 @@ export default function ChatWindow({ messages, onAddToCart, onSendMessage, onCon
     }
   };
 
+  const renderInputBar = () => (
+    <div className="w-full max-w-md sm:max-w-lg md:max-w-3xl mx-auto flex flex-col items-center">
+      <div className="w-full flex items-center bg-white/95 backdrop-blur-md rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-purple-100/50 px-4 sm:px-6 py-2 sm:py-2.5 gap-2 sm:gap-3 min-h-[52px] sm:min-h-[56px] transition-all">
+        <button className="p-2 text-on-surface-variant hover:bg-surface-container rounded-full transition-colors flex items-center justify-center flex-shrink-0">
+          <span className="material-symbols-outlined">attach_file</span>
+        </button>
+        <div className="relative flex-1 flex items-center h-full">
+          {cooldown > 0 && (
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none flex items-center gap-1 pl-3">
+              <span className="text-on-surface-variant/80 text-sm sm:text-base">⏳ API Limit reached. Please wait</span>
+              <span className="text-red-600 font-bold text-sm sm:text-base">{cooldown}s</span>
+              <span className="text-on-surface-variant/80 text-sm sm:text-base">...</span>
+            </div>
+          )}
+          <textarea
+            ref={textareaRef}
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onInput={handleInputResize}
+            onKeyDown={handleKeyPress}
+            disabled={cooldown > 0}
+            rows={1}
+            className={`w-full bg-transparent border-none outline-none ring-0 focus:outline-none focus:ring-0 resize-none max-h-32 overflow-y-auto text-sm sm:text-base py-1.5 disabled:cursor-not-allowed ${cooldown > 0 ? 'placeholder:text-transparent disabled:opacity-100' : 'placeholder:text-on-surface-variant/60 disabled:opacity-50'}`}
+            placeholder={cooldown > 0 ? "" : "Message Kapruka AI..."}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={toggleListening}
+          disabled={cooldown > 0 || isTranscribing}
+          title={isTranscribing ? "Transcribing audio..." : (isListening ? "Stop recording" : "Start voice input")}
+          className={`w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center transition-all ${isListening ? 'bg-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.7)]' : (isTranscribing ? 'bg-purple-500 text-white animate-spin' : 'text-on-surface-variant hover:bg-surface-container')}`}
+        >
+          <span className="material-symbols-outlined">{isTranscribing ? 'sync' : (isListening ? 'mic_off' : 'mic')}</span>
+        </button>
+        <button disabled={cooldown > 0} onClick={handleSend} className={`w-10 h-10 flex-shrink-0 ${cooldown > 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-deep-purple hover:opacity-90 active:scale-95'} text-white rounded-full flex items-center justify-center shadow-md transition-all`}>
+          <span className="material-symbols-outlined">arrow_upward</span>
+        </button>
+      </div>
+      {messages.length === 0 && (
+        <div className="flex flex-wrap justify-center items-center gap-2 mt-4 transition-all duration-500 w-full px-2">
+          {["🌸 Flowers for GF", "⌚ Gifts for Him", "🚚 Check Delivery"].map((pill, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => onSendMessage(pill)}
+              className="px-4 py-2 bg-white/60 backdrop-blur-md border border-purple-100/40 rounded-full text-xs text-slate-600 hover:bg-purple-50 hover:scale-105 transition-all duration-300 cursor-pointer shadow-sm"
+            >
+              {pill}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   return (
-    <main className="relative h-screen pt-16 flex overflow-hidden">
+    <main className="relative h-screen pt-16 flex flex-col w-full items-center overflow-hidden">
       <section
         ref={scrollAreaRef}
         id="chat-scroll-area"
-        className="flex-1 flex flex-col items-center overflow-y-auto px-4 pb-[140px] pt-8 scroll-smooth hide-scrollbar"
+        className="w-full flex-1 flex flex-col items-center overflow-y-auto px-4 pb-8 pt-8 scroll-smooth hide-scrollbar"
       >
-        <div id="chat-messages-container" className="w-full max-w-[800px] flex flex-col gap-6 pb-[140px]">
-          {/* Wrapping Container for Empty State */}
-          <div className={`w-full transition-all duration-1000 ease-in-out ${messages.length === 0 ? 'flex flex-col items-center mt-12 sm:mt-20 mb-auto transform translate-y-0' : 'h-0 opacity-0 -translate-y-10 scale-95 pointer-events-none duration-700 overflow-hidden m-0 p-0'}`}>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-500 text-center mb-4 tracking-tight">
+        {messages.length === 0 ? (
+          <div className="w-full max-w-md sm:max-w-lg md:max-w-3xl mx-auto my-auto flex flex-col items-center justify-center gap-6 sm:gap-8 py-8 animate-in fade-in duration-500">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-500 text-center tracking-tight max-w-full break-words leading-snug">
               What can I help you find today?
             </h1>
+            {renderInputBar()}
           </div>
-
-          {messages.map((msg, index) => {
+        ) : (
+          <div id="chat-messages-container" className="w-full max-w-md sm:max-w-lg md:max-w-3xl mx-auto flex flex-col gap-6 pb-[160px]">
+            {messages.map((msg, index) => {
               const isUser = msg.role === 'user';
               return (
                 <div key={index} className={`flex flex-col gap-2 ${isUser ? 'items-end' : 'items-start'} w-full animate-in fade-in slide-in-from-bottom-4 duration-500`}>
@@ -175,77 +232,28 @@ export default function ChatWindow({ messages, onAddToCart, onSendMessage, onCon
               );
             })}
 
-          {isTyping && (
-            <div className="flex items-start gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="w-10 h-10 rounded-full bg-deep-purple flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden border border-white/20">
-                <img alt="Assistant" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBVIabXJxRrTsz2PWJDkfYNmQS3EHsueoGTfIh3TXRmOTUjHDZL-dIC_MC9gvU_Cn3nI5rIU6zN1tImvBVQBAQvQDLrYNOfAEHktNnPF2uhJjS0BQHuIUwgHuKOEtw9U3mgcHCSzfrJmaCk9pw7zve8CzxJrudJ8at_nU7tfLhXm0bV73HFhmMELb7Xk1XC48P5UEskzAWO-gKjfMbe6aKP3QDL8AX3toYQf-bGKr_sHQgZdgwTe5bkJFS9eewGZd4f9c4qY6fz74" />
+            {isTyping && (
+              <div className="flex items-start gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="w-10 h-10 rounded-full bg-deep-purple flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden border border-white/20">
+                  <img alt="Assistant" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBVIabXJxRrTsz2PWJDkfYNmQS3EHsueoGTfIh3TXRmOTUjHDZL-dIC_MC9gvU_Cn3nI5rIU6zN1tImvBVQBAQvQDLrYNOfAEHktNnPF2uhJjS0BQHuIUwgHuKOEtw9U3mgcHCSzfrJmaCk9pw7zve8CzxJrudJ8at_nU7tfLhXm0bV73HFhmMELb7Xk1XC48P5UEskzAWO-gKjfMbe6aKP3QDL8AX3toYQf-bGKr_sHQgZdgwTe5bkJFS9eewGZd4f9c4qY6fz74" />
+                </div>
+                <div className="flex items-center gap-1 p-4 bg-white/50 backdrop-blur-md rounded-2xl w-fit shadow-sm border border-purple-100">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
+                </div>
               </div>
-              <div className="flex items-center gap-1 p-4 bg-white/50 backdrop-blur-md rounded-2xl w-fit shadow-sm border border-purple-100">
-                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </section>
 
-      {/* Floating Chat Input Bar */}
-      <div className={`fixed left-0 w-full ${isCheckoutOpen ? 'md:w-[calc(100%-400px)]' : 'md:w-full'} flex justify-center z-40 transition-all duration-1000 ease-in-out ${messages.length === 0 ? 'bottom-[45vh] px-4' : 'bottom-0 p-margin-mobile md:pb-8 bg-gradient-to-t from-background via-background to-transparent pt-12'}`} style={{ transitionTimingFunction: 'cubic-bezier(0.25, 1, 0.5, 1)' }}>
-        <div className="w-full max-w-4xl transition-all duration-1000 ease-in-out flex flex-col items-center" style={{ transitionTimingFunction: 'cubic-bezier(0.25, 1, 0.5, 1)' }}>
-          <div className="w-full max-w-[800px] flex items-center bg-white/95 backdrop-blur-md rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-purple-100/50 px-6 py-2.5 gap-3 min-h-[56px] transition-all">
-            <button className="p-2 text-on-surface-variant hover:bg-surface-container rounded-full transition-colors flex items-center justify-center flex-shrink-0">
-              <span className="material-symbols-outlined">attach_file</span>
-            </button>
-            <div className="relative flex-1 flex items-center h-full">
-              {cooldown > 0 && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none flex items-center gap-1 pl-3">
-                  <span className="text-on-surface-variant/80 text-sm sm:text-base">⏳ API Limit reached. Please wait</span>
-                  <span className="text-red-600 font-bold text-sm sm:text-base">{cooldown}s</span>
-                  <span className="text-on-surface-variant/80 text-sm sm:text-base">...</span>
-                </div>
-              )}
-              <textarea
-                ref={textareaRef}
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onInput={handleInputResize}
-                onKeyDown={handleKeyPress}
-                disabled={cooldown > 0}
-                rows={1}
-                className={`w-full bg-transparent border-none outline-none ring-0 focus:outline-none focus:ring-0 resize-none max-h-32 overflow-y-auto text-sm sm:text-base py-1.5 disabled:cursor-not-allowed ${cooldown > 0 ? 'placeholder:text-transparent disabled:opacity-100' : 'placeholder:text-on-surface-variant/60 disabled:opacity-50'}`}
-                placeholder={cooldown > 0 ? "" : "Message Kapruka AI..."}
-              />
-            </div>
-            <button
-              type="button"
-              onClick={toggleListening}
-              disabled={cooldown > 0 || isTranscribing}
-              title={isTranscribing ? "Transcribing audio..." : (isListening ? "Stop recording" : "Start voice input")}
-              className={`w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center transition-all ${isListening ? 'bg-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.7)]' : (isTranscribing ? 'bg-purple-500 text-white animate-spin' : 'text-on-surface-variant hover:bg-surface-container')}`}
-            >
-              <span className="material-symbols-outlined">{isTranscribing ? 'sync' : (isListening ? 'mic_off' : 'mic')}</span>
-            </button>
-            <button disabled={cooldown > 0} onClick={handleSend} className={`w-10 h-10 flex-shrink-0 ${cooldown > 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-deep-purple hover:opacity-90 active:scale-95'} text-white rounded-full flex items-center justify-center shadow-md transition-all`}>
-              <span className="material-symbols-outlined">arrow_upward</span>
-            </button>
-          </div>
-          {messages.length === 0 && (
-            <div className="flex flex-wrap items-center justify-center gap-3 mt-4 transition-all duration-500">
-              {["🌸 Flowers for GF", "⌚ Gifts for Him", "🚚 Check Delivery"].map((pill, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => onSendMessage(pill)}
-                  className="px-4 py-2 bg-white/60 backdrop-blur-md border border-purple-100/40 rounded-full text-xs text-slate-600 hover:bg-purple-50 hover:scale-105 transition-all duration-300 cursor-pointer shadow-sm"
-                >
-                  {pill}
-                </button>
-              ))}
-            </div>
-          )}
+      {/* Fixed Chat Input Bar for active chat */}
+      {messages.length > 0 && (
+        <div className={`fixed left-0 bottom-0 w-full ${isCheckoutOpen ? 'md:w-[calc(100%-400px)]' : 'md:w-full'} flex justify-center z-40 pb-4 sm:pb-8 bg-gradient-to-t from-background via-background to-transparent pt-8 sm:pt-12 px-4 sm:px-5 animate-in fade-in slide-in-from-bottom duration-300`}>
+          {renderInputBar()}
         </div>
-      </div>
+      )}
     </main>
   );
 }
