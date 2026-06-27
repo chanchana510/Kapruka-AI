@@ -126,7 +126,7 @@ function App() {
     localStorage.removeItem('kapruka_messages');
     localStorage.removeItem('kapruka_cart');
     try {
-      await fetch('http://127.0.0.1:8000/reset-session', { method: 'POST' });
+      await fetch(`${import.meta.env.VITE_API_URL}/reset-session`, { method: 'POST' });
     } catch (e) {
       console.error("Failed to reset session:", e);
     }
@@ -175,7 +175,7 @@ function App() {
   const handleAudioUpload = async (base64Audio) => {
     setIsTranscribing(true);
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/transcribe', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/transcribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ audio_data: base64Audio })
@@ -206,7 +206,7 @@ function App() {
     const fullHistory = [...messages, { role: 'user', content: text }];
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/chat', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -263,7 +263,7 @@ function App() {
     
     setIsTyping(true);
     try {
-      const response = await fetch('http://127.0.0.1:8000/chat', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

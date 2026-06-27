@@ -50,7 +50,7 @@ export default function CheckoutDrawer({ isOpen, onClose, cart, updateQuantity }
 
     const delayDebounceFn = setTimeout(async () => {
       try {
-        const response = await fetch(`http://127.0.0.1:8000/search-cities?q=${encodeURIComponent(city)}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/search-cities?q=${encodeURIComponent(city)}`, {
           signal: signal
         });
         
@@ -83,7 +83,7 @@ export default function CheckoutDrawer({ isOpen, onClose, cart, updateQuantity }
     const checkDelivery = async () => {
       setIsCheckingDelivery(true);
       try {
-        const response = await fetch('http://127.0.0.1:8000/check-delivery', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/check-delivery`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -110,7 +110,7 @@ export default function CheckoutDrawer({ isOpen, onClose, cart, updateQuantity }
   const handleCheckout = async () => {
     setIsProcessingOrder(true);
     try {
-      const response = await fetch('http://127.0.0.1:8000/create-order', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/create-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
