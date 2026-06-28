@@ -43,9 +43,9 @@ def resolve_and_verify_command(raw_command: str) -> str:
         # 1 & 2. Verification & Logging for commands in system PATH
         resolved_path = shutil.which(raw_command)
         if not resolved_path:
-            error_msg = f"MCP tool command not found: {raw_command}"
-            print(f"❌ [MCP ERROR] {error_msg}")
-            raise FileNotFoundError(error_msg)
+            warning_msg = "MCP tool executable (npx) not found. Ensure Node.js is installed."
+            print(f"⚠️ [WARNING] {warning_msg}")
+            raise FileNotFoundError(warning_msg)
             
     return resolved_path
 
@@ -71,6 +71,7 @@ async def safe_stdio_client(server_params: StdioServerParameters):
         resolved_command = resolve_and_verify_command(server_params.command)
         server_params.command = resolved_command
     except FileNotFoundError as e:
+        print("⚠️ [WARNING] MCP tool executable (npx) not found. Ensure Node.js is installed.")
         raise e
 
     # 4. Debug Logging: Log the absolute path just before initializing the client
@@ -80,9 +81,8 @@ async def safe_stdio_client(server_params: StdioServerParameters):
         async with stdio_client(server_params) as (read_stream, write_stream):
             yield read_stream, write_stream
     except FileNotFoundError as fnf:
-        error_msg = f"MCP tool command not found during stdio_client launch: {server_params.command}"
-        print(f"❌ [MCP ERROR] {error_msg} | Trace: {fnf}")
-        raise FileNotFoundError(error_msg) from fnf
+        print("⚠️ [WARNING] MCP tool executable (npx) not found. Ensure Node.js is installed.")
+        raise FileNotFoundError("MCP tool executable (npx) not found. Ensure Node.js is installed.") from fnf
 
 
 # Load environment variables
@@ -383,8 +383,8 @@ CRITICAL RULE: STRICT LANGUAGE CONSISTENCY & NO CODE-SWITCHING
                                             p["image"] = None
                                             
                         except FileNotFoundError as fnf_err:
-                            print(f"🚨 [DEBUG] Bridge FileNotFoundError: {str(fnf_err)}")
-                            result_text = f"MCP executable missing: {str(fnf_err)}"
+                            print("⚠️ [WARNING] MCP tool executable (npx) not found. Ensure Node.js is installed.")
+                            result_text = "MCP tool executable (npx) not found. Ensure Node.js is installed."
                         except Exception as e:
                             print(f"🚨 [DEBUG] Bridge Exception: {str(e)}")
                             traceback.print_exc()
@@ -500,7 +500,7 @@ async def search_cities(q: str = ""):
                 
                 return {"cities": list(set(cleaned_cities))}
     except FileNotFoundError as fnf_err:
-        print(f"🚨 [Safe City Catch] FileNotFoundError: {str(fnf_err)}")
+        print("⚠️ [WARNING] MCP tool executable (npx) not found. Ensure Node.js is installed.")
         return {"cities": []}
     except Exception as e:
         print(f"🚨 Safe City Catch: {str(e)}")
@@ -559,7 +559,7 @@ async def check_delivery_endpoint(request: CheckDeliveryRequest):
                     
                 return {"delivery_fee": delivery_fee, "rate": delivery_fee, "raw": raw_delivery_text}
     except FileNotFoundError as fnf_err:
-        print(f"🚨 [Safe Delivery Catch] FileNotFoundError: {str(fnf_err)}")
+        print("⚠️ [WARNING] MCP tool executable (npx) not found. Ensure Node.js is installed.")
         return {"delivery_fee": 450, "rate": 450, "raw": ""}
     except Exception as e:
         print(f"🚨 Safe Delivery Catch: {str(e)}")
@@ -584,8 +584,8 @@ async def create_order_endpoint(request: CreateOrderRequest):
                 payment_url = url_match.group(1) if url_match else None
                 return {"payment_url": payment_url, "raw": result_text}
     except FileNotFoundError as fnf_err:
-        print(f"🚨 [Create Order Catch] FileNotFoundError: {str(fnf_err)}")
-        return {"error": f"MCP tool execution failed: {str(fnf_err)}"}
+        print("⚠️ [WARNING] MCP tool executable (npx) not found. Ensure Node.js is installed.")
+        return {"error": "MCP tool executable (npx) not found. Ensure Node.js is installed."}
     except Exception as e:
         traceback.print_exc()
         return {"error": str(e)}
