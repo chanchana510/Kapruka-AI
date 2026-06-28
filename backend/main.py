@@ -15,19 +15,46 @@ from contextlib import asynccontextmanager
 from mcp import ClientSession
 from mcp.client.stdio import stdio_client, StdioServerParameters
 
+def resolve_and_verify_command(raw_command: str) -> str:
+    """
+    Resolves a command or script path to an absolute executable path and verifies its existence.
+    Enforces Verification, Logging, Path Handling, and Debug requirements.
+    """
+    # 3. Path Handling: If it's a relative path, contains path separators, or is a local script/file
+    is_path = (
+        os.path.sep in raw_command 
+        or (sys.platform == "win32" and "/" in raw_command) 
+        or raw_command.startswith(".") 
+        or os.path.exists(raw_command)
+    )
+    
+    if is_path:
+        if not os.path.isabs(raw_command):
+            resolved_path = os.path.abspath(os.path.join(os.getcwd(), raw_command))
+        else:
+            resolved_path = raw_command
+            
+        # 1 & 2. Verification & Logging for script paths / files
+        if not os.path.exists(resolved_path):
+            error_msg = f"MCP tool command not found: {raw_command} (resolved path: {resolved_path})"
+            print(f"❌ [MCP ERROR] {error_msg}")
+            raise FileNotFoundError(error_msg)
+    else:
+        # 1 & 2. Verification & Logging for commands in system PATH
+        resolved_path = shutil.which(raw_command)
+        if not resolved_path:
+            error_msg = f"MCP tool command not found: {raw_command}"
+            print(f"❌ [MCP ERROR] {error_msg}")
+            raise FileNotFoundError(error_msg)
+            
+    return resolved_path
+
 def get_verified_mcp_params() -> StdioServerParameters:
     """
     Resolves and verifies the npx executable path across production (Railway) and local environments.
-    Checks environment override MCP_NPX_PATH or verifies PATH availability via shutil.which.
     """
-    cmd_name = os.getenv("MCP_NPX_PATH") or ("npx.cmd" if sys.platform == "win32" else "npx")
-    resolved_cmd = shutil.which(cmd_name) or cmd_name
-    
-    if not shutil.which(resolved_cmd) and not os.path.exists(resolved_cmd):
-        raise FileNotFoundError(
-            f"[MCP Executable Error] The command '{cmd_name}' was not found in PATH or at specified location. "
-            "Ensure Node.js and npm/npx are installed in your production environment (e.g., Railway Nixpacks/Dockerfile)."
-        )
+    raw_cmd = os.getenv("MCP_NPX_PATH") or ("npx.cmd" if sys.platform == "win32" else "npx")
+    resolved_cmd = resolve_and_verify_command(raw_cmd)
         
     return StdioServerParameters(
         command=resolved_cmd,
@@ -37,26 +64,24 @@ def get_verified_mcp_params() -> StdioServerParameters:
 @asynccontextmanager
 async def safe_stdio_client(server_params: StdioServerParameters):
     """
-    Wraps stdio_client with explicit verification and clear error logging instead of raw tracebacks.
+    Wraps stdio_client with explicit verification, debug logging, and clear error reporting.
     """
-    cmd = server_params.command
-    if not shutil.which(cmd) and not os.path.exists(cmd):
-        error_msg = (
-            f"🚨 [MCP EXECUTION ERROR] Executable '{cmd}' not found! "
-            f"Failed to start MCP server process. Please verify Node.js/npx installation and PATH in production."
-        )
-        print(error_msg)
-        raise FileNotFoundError(error_msg)
+    # Ensure command is verified and resolved to absolute path
+    try:
+        resolved_command = resolve_and_verify_command(server_params.command)
+        server_params.command = resolved_command
+    except FileNotFoundError as e:
+        raise e
+
+    # 4. Debug Logging: Log the absolute path just before initializing the client
+    print(f"🔍 [MCP DEBUG] Initializing stdio_client executing command at absolute path: {server_params.command} | Args: {server_params.args}")
     
     try:
         async with stdio_client(server_params) as (read_stream, write_stream):
             yield read_stream, write_stream
     except FileNotFoundError as fnf:
-        error_msg = (
-            f"🚨 [MCP EXECUTION ERROR] FileNotFoundError while launching '{cmd}': {fnf}. "
-            f"Ensure the command exists in production PATH."
-        )
-        print(error_msg)
+        error_msg = f"MCP tool command not found during stdio_client launch: {server_params.command}"
+        print(f"❌ [MCP ERROR] {error_msg} | Trace: {fnf}")
         raise FileNotFoundError(error_msg) from fnf
 
 
