@@ -8,10 +8,57 @@ from pydantic import BaseModel
 import google.generativeai as genai
 from dotenv import load_dotenv
 import sys
+import shutil
 import re
 import asyncio
+from contextlib import asynccontextmanager
 from mcp import ClientSession
 from mcp.client.stdio import stdio_client, StdioServerParameters
+
+def get_verified_mcp_params() -> StdioServerParameters:
+    """
+    Resolves and verifies the npx executable path across production (Railway) and local environments.
+    Checks environment override MCP_NPX_PATH or verifies PATH availability via shutil.which.
+    """
+    cmd_name = os.getenv("MCP_NPX_PATH") or ("npx.cmd" if sys.platform == "win32" else "npx")
+    resolved_cmd = shutil.which(cmd_name) or cmd_name
+    
+    if not shutil.which(resolved_cmd) and not os.path.exists(resolved_cmd):
+        raise FileNotFoundError(
+            f"[MCP Executable Error] The command '{cmd_name}' was not found in PATH or at specified location. "
+            "Ensure Node.js and npm/npx are installed in your production environment (e.g., Railway Nixpacks/Dockerfile)."
+        )
+        
+    return StdioServerParameters(
+        command=resolved_cmd,
+        args=["-y", "mcp-remote", "https://mcp.kapruka.com/mcp"]
+    )
+
+@asynccontextmanager
+async def safe_stdio_client(server_params: StdioServerParameters):
+    """
+    Wraps stdio_client with explicit verification and clear error logging instead of raw tracebacks.
+    """
+    cmd = server_params.command
+    if not shutil.which(cmd) and not os.path.exists(cmd):
+        error_msg = (
+            f"🚨 [MCP EXECUTION ERROR] Executable '{cmd}' not found! "
+            f"Failed to start MCP server process. Please verify Node.js/npx installation and PATH in production."
+        )
+        print(error_msg)
+        raise FileNotFoundError(error_msg)
+    
+    try:
+        async with stdio_client(server_params) as (read_stream, write_stream):
+            yield read_stream, write_stream
+    except FileNotFoundError as fnf:
+        error_msg = (
+            f"🚨 [MCP EXECUTION ERROR] FileNotFoundError while launching '{cmd}': {fnf}. "
+            f"Ensure the command exists in production PATH."
+        )
+        print(error_msg)
+        raise FileNotFoundError(error_msg) from fnf
+
 
 # Load environment variables
 load_dotenv()
@@ -278,12 +325,10 @@ CRITICAL RULE: STRICT LANGUAGE CONSISTENCY & NO CODE-SWITCHING
 
                         print(f"\n🚀 [DEBUG] ESTABLISHING MCP BRIDGE | TOOL: {fn.name} | ARGS: {mcp_arguments}")
 
-                        npx_cmd = "npx.cmd" if sys.platform == "win32" else "npx"
-                        server_params = StdioServerParameters(command=npx_cmd, args=["-y", "mcp-remote", "https://mcp.kapruka.com/mcp"])
-
                         result_text = "No results found."
                         try:
-                            async with stdio_client(server_params) as (read_stream, write_stream):
+                            server_params = get_verified_mcp_params()
+                            async with safe_stdio_client(server_params) as (read_stream, write_stream):
                                 async with ClientSession(read_stream, write_stream) as session:
                                     await session.initialize()
                                     mcp_result = await session.call_tool(fn.name, arguments={"params": mcp_arguments})
@@ -312,6 +357,9 @@ CRITICAL RULE: STRICT LANGUAGE CONSISTENCY & NO CODE-SWITCHING
                                         for p in extracted_products[4:]:
                                             p["image"] = None
                                             
+                        except FileNotFoundError as fnf_err:
+                            print(f"🚨 [DEBUG] Bridge FileNotFoundError: {str(fnf_err)}")
+                            result_text = f"MCP executable missing: {str(fnf_err)}"
                         except Exception as e:
                             print(f"🚨 [DEBUG] Bridge Exception: {str(e)}")
                             traceback.print_exc()
@@ -404,14 +452,9 @@ async def search_cities(q: str = ""):
     if len(q) < 2:
         return {"cities": []}
         
-    npx_cmd = "npx.cmd" if sys.platform == "win32" else "npx"
-    server_params = StdioServerParameters(
-        command=npx_cmd,
-        args=["-y", "mcp-remote", "https://mcp.kapruka.com/mcp"]
-    )
-    
     try:
-        async with stdio_client(server_params) as (read_stream, write_stream):
+        server_params = get_verified_mcp_params()
+        async with safe_stdio_client(server_params) as (read_stream, write_stream):
             async with ClientSession(read_stream, write_stream) as session:
                 await session.initialize()
                 
@@ -431,6 +474,9 @@ async def search_cities(q: str = ""):
                 cleaned_cities = [c.strip() for c in cities if "cities" not in c.lower() and len(c.strip()) > 2]
                 
                 return {"cities": list(set(cleaned_cities))}
+    except FileNotFoundError as fnf_err:
+        print(f"🚨 [Safe City Catch] FileNotFoundError: {str(fnf_err)}")
+        return {"cities": []}
     except Exception as e:
         print(f"🚨 Safe City Catch: {str(e)}")
         return {"cities": []}
@@ -455,12 +501,8 @@ async def check_delivery_endpoint(request: CheckDeliveryRequest):
         dict: The parsed delivery fee (numeric) and the raw text payload.
     """
     try:
-        npx_cmd = "npx.cmd" if sys.platform == "win32" else "npx"
-        server_params = StdioServerParameters(
-            command=npx_cmd,
-            args=["-y", "mcp-remote", "https://mcp.kapruka.com/mcp"]
-        )
-        async with stdio_client(server_params) as (read_stream, write_stream):
+        server_params = get_verified_mcp_params()
+        async with safe_stdio_client(server_params) as (read_stream, write_stream):
             async with ClientSession(read_stream, write_stream) as session:
                 await session.initialize()
                 
@@ -491,6 +533,9 @@ async def check_delivery_endpoint(request: CheckDeliveryRequest):
                     delivery_fee = 450
                     
                 return {"delivery_fee": delivery_fee, "rate": delivery_fee, "raw": raw_delivery_text}
+    except FileNotFoundError as fnf_err:
+        print(f"🚨 [Safe Delivery Catch] FileNotFoundError: {str(fnf_err)}")
+        return {"delivery_fee": 450, "rate": 450, "raw": ""}
     except Exception as e:
         print(f"🚨 Safe Delivery Catch: {str(e)}")
         return {"delivery_fee": 450, "rate": 450, "raw": ""}
@@ -501,12 +546,8 @@ async def check_delivery_endpoint(request: CheckDeliveryRequest):
 @app.post("/create-order")
 async def create_order_endpoint(request: CreateOrderRequest):
     try:
-        npx_cmd = "npx.cmd" if sys.platform == "win32" else "npx"
-        server_params = StdioServerParameters(
-            command=npx_cmd,
-            args=["-y", "mcp-remote", "https://mcp.kapruka.com/mcp"]
-        )
-        async with stdio_client(server_params) as (read_stream, write_stream):
+        server_params = get_verified_mcp_params()
+        async with safe_stdio_client(server_params) as (read_stream, write_stream):
             async with ClientSession(read_stream, write_stream) as session:
                 await session.initialize()
                 wrapped_args = {"params": request.model_dump()}
@@ -517,6 +558,9 @@ async def create_order_endpoint(request: CreateOrderRequest):
                 url_match = re.search(r'(https?://[^\s)]+)', result_text)
                 payment_url = url_match.group(1) if url_match else None
                 return {"payment_url": payment_url, "raw": result_text}
+    except FileNotFoundError as fnf_err:
+        print(f"🚨 [Create Order Catch] FileNotFoundError: {str(fnf_err)}")
+        return {"error": f"MCP tool execution failed: {str(fnf_err)}"}
     except Exception as e:
         traceback.print_exc()
         return {"error": str(e)}
