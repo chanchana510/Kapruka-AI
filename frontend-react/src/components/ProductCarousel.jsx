@@ -11,13 +11,9 @@ export default function ProductCarousel({ products, onAdd }) {
 
   if (!products || products.length === 0) return null;
   
-  const validProducts = products.filter(product => product.image && product.image.trim() !== "");
-
   return (
     <div className="ml-14 -mr-4 md:mr-0 animate-in fade-in slide-in-from-right-8 duration-700 delay-500 overflow-x-auto hide-scrollbar flex gap-4 pr-10 pb-4">
-      {validProducts.map((product, index) => {
-        if (failedImageIds.has(product.id || index)) return null;
-
+      {products.map((product, index) => {
         return (
           <ProductCard 
             key={product.id || index} 

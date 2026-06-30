@@ -155,8 +155,8 @@ export default function CheckoutDrawer({ isOpen, onClose, cart, updateQuantity }
             cart.map(item => (
               <div key={item.id} className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-lg bg-surface-container flex-shrink-0 overflow-hidden border border-outline-variant/20 relative">
-                  {item.image ? (
-                    <img alt={item.name} className="w-full h-full object-cover" src={item.image}/>
+                  {item.image && typeof item.image === 'string' && item.image.trim() !== '' && item.image.trim().toLowerCase() !== 'null' && item.image.trim().toLowerCase() !== 'undefined' ? (
+                    <img alt={item.name || 'Item'} className="w-full h-full object-cover" src={item.image} onError={(e) => { e.target.style.display = 'none'; }} />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-surface-variant to-outline-variant flex items-center justify-center">
                        <span className="material-symbols-outlined text-white">shopping_bag</span>
