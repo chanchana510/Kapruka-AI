@@ -1,22 +1,5 @@
 import React, { useState } from 'react';
 
-const getPlaceholder = (name = '') => {
-  const lowerName = name.toLowerCase();
-  if (lowerName.includes('rose') || lowerName.includes('flower') || lowerName.includes('bouquet') || lowerName.includes('orchid')) {
-    return { bg: 'from-rose-100 to-orange-50', emoji: '🌸' };
-  }
-  if (lowerName.includes('cake') || lowerName.includes('chocolate') || lowerName.includes('gateau')) {
-    return { bg: 'from-amber-100 to-orange-50', emoji: '🎂' };
-  }
-  if (lowerName.includes('bear') || lowerName.includes('toy') || lowerName.includes('plush')) {
-    return { bg: 'from-blue-100 to-purple-50', emoji: '🧸' };
-  }
-  if (lowerName.includes('hamper') || lowerName.includes('basket')) {
-    return { bg: 'from-green-100 to-emerald-50', emoji: '🧺' };
-  }
-  return { bg: 'from-slate-100 to-gray-50', emoji: '🛍️' };
-};
-
 const isValidImageUrl = (url) => {
   if (!url || typeof url !== 'string') return false;
   const trimmed = url.trim();
@@ -26,30 +9,23 @@ const isValidImageUrl = (url) => {
 
 export default function ProductCard({ product, onAdd, onImageError }) {
   const [imgFailed, setImgFailed] = useState(false);
-  const placeholder = getPlaceholder(product.name);
-  const hasValidImg = isValidImageUrl(product.image) && !imgFailed;
+
+  if (!product || !isValidImageUrl(product.image) || imgFailed) {
+    return null;
+  }
 
   return (
     <div className="min-w-[280px] md:min-w-[320px] bg-white/80 backdrop-blur-md rounded-2xl overflow-hidden shadow-lg border border-white/40 flex flex-col group cursor-pointer hover:shadow-xl transition-all font-sans">
       <div className="relative h-48 w-full bg-gray-100">
-        {hasValidImg ? (
-          <img 
-            alt={product.name || 'Product'} 
-            className="w-full h-full object-cover rounded-t-2xl transition-transform duration-300 group-hover:scale-105" 
-            src={product.image} 
-            onError={(e) => {
-              setImgFailed(true);
-              if (onImageError) onImageError(e);
-            }}
-          />
-        ) : (
-          <div className="w-full h-full bg-gray-100 flex flex-col items-center justify-center text-gray-400 rounded-t-2xl relative overflow-hidden transition-colors">
-            <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${placeholder.bg} flex items-center justify-center shadow-sm mb-2 border border-white/60 z-10`}>
-              <span className="text-2xl drop-shadow-sm">{placeholder.emoji}</span>
-            </div>
-            <span className="text-xs font-medium text-gray-400 uppercase tracking-wider z-10">No Image Available</span>
-          </div>
-        )}
+        <img 
+          alt={product.name || 'Product'} 
+          className="w-full h-full object-cover rounded-t-2xl transition-transform duration-300 group-hover:scale-105" 
+          src={product.image} 
+          onError={(e) => {
+            setImgFailed(true);
+            if (onImageError) onImageError(e);
+          }}
+        />
         <button 
           onClick={(e) => { e.stopPropagation(); onAdd(product, e); }}
           className="absolute bottom-3 right-3 w-10 h-10 bg-deep-purple/90 backdrop-blur-md text-white rounded-full flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform border border-white/20 cursor-pointer"
