@@ -1,9 +1,14 @@
 import os
+import tempfile
+import json
 import traceback
 import base64
 from typing import List, Dict, Any, Optional
+import io
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import Response, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from google.cloud import texttospeech
 from pydantic import BaseModel
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -87,6 +92,18 @@ async def safe_stdio_client(server_params: StdioServerParameters):
 
 # Load environment variables
 load_dotenv()
+
+# Handle Google Cloud service account JSON credentials safely in production (Railway)
+gcp_creds_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
+if gcp_creds_json:
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as temp_creds_file:
+            temp_creds_file.write(gcp_creds_json)
+            temp_creds_path = temp_creds_file.name
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_creds_path
+        print(f"🔒 [GCP CREDENTIALS] Successfully loaded GOOGLE_CREDENTIALS_JSON into temp file: {temp_creds_path}")
+    except Exception as e:
+        print(f"⚠️ [WARNING] Failed to write GOOGLE_CREDENTIALS_JSON to temp file: {e}")
 
 # Configure Gemini
 api_keys_env = os.getenv("GEMINI_API_KEYS")
@@ -183,6 +200,9 @@ class CreateOrderRequest(BaseModel):
 
 class AudioRequest(BaseModel):
     audio_data: str
+
+class TTSRequest(BaseModel):
+    text: str
 
 def parse_kapruka_markdown(markdown_text: str) -> List[Dict[str, str]]:
     """
@@ -630,6 +650,56 @@ async def transcribe_audio(request: AudioRequest):
     except Exception as e:
         print(f"[ERROR] Audio Transcription Failed: {str(e)}")
         raise HTTPException(status_code=500, detail="Audio transcription failed")
+
+# ==============================================================================
+# GOOGLE CLOUD TEXT-TO-SPEECH (TTS) SETUP INSTRUCTIONS
+# ==============================================================================
+# 1. requirements.txt update:
+#    Ensure 'google-cloud-texttospeech>=2.16.0' is added to your requirements.txt.
+#
+# 2. GOOGLE_APPLICATION_CREDENTIALS environment variable setup:
+#    Google Cloud client libraries use Application Default Credentials (ADC).
+#    - Local Development: Download your service account JSON key file from GCP Console
+#      and set the environment variable pointing to its absolute path:
+#      export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account-key.json"
+#    - Production (Railway / Docker):
+#      Store the raw JSON contents of the key file inside a secret environment variable
+#      or write it to a file on container startup, then set GOOGLE_APPLICATION_CREDENTIALS
+#      to point to that file path. Alternatively, if deployed on GCP (Cloud Run/GKE),
+#      ADC automatically picks up the attached IAM service account.
+# ==============================================================================
+
+@app.post("/tts")
+async def text_to_speech(request: TTSRequest):
+    try:
+        clean_text = re.sub(r'\[CATEGORY:.*?\]', '', request.text, flags=re.IGNORECASE).strip()
+        if not clean_text:
+            raise HTTPException(status_code=400, detail="Text is empty")
+            
+        def generate_audio_stream():
+            client = texttospeech.TextToSpeechClient()
+            synthesis_input = texttospeech.SynthesisInput(text=clean_text)
+
+            # Synthesize using high-quality Sinhala Wavenet voice
+            voice = texttospeech.VoiceSelectionParams(
+                language_code="si-LK",
+                name="si-LK-Wavenet-A"
+            )
+
+            audio_config = texttospeech.AudioConfig(
+                audio_encoding=texttospeech.AudioEncoding.MP3
+            )
+
+            response = client.synthesize_speech(
+                input=synthesis_input, voice=voice, audio_config=audio_config
+            )
+            return io.BytesIO(response.audio_content)
+            
+        audio_stream = await asyncio.to_thread(generate_audio_stream)
+        return StreamingResponse(audio_stream, media_type="audio/mpeg")
+    except Exception as e:
+        print(f"[ERROR] Google Cloud TTS Failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

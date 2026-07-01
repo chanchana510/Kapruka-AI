@@ -9,6 +9,57 @@ export default function ChatWindow({ messages, onAddToCart, onSendMessage, onCon
   const [isListening, setIsListening] = useState(false);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const [ttsLoadingIndex, setTtsLoadingIndex] = useState(null);
+  const [ttsPlayingIndex, setTtsPlayingIndex] = useState(null);
+  const ttsAudioRef = useRef(null);
+
+  const handlePlayTTS = async (text, index) => {
+    if (ttsPlayingIndex === index && ttsAudioRef.current) {
+      ttsAudioRef.current.pause();
+      ttsAudioRef.current = null;
+      setTtsPlayingIndex(null);
+      return;
+    }
+
+    if (ttsAudioRef.current) {
+      ttsAudioRef.current.pause();
+      ttsAudioRef.current = null;
+      setTtsPlayingIndex(null);
+    }
+
+    try {
+      setTtsLoadingIndex(index);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+
+      if (!response.ok) throw new Error("Failed to generate audio");
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      ttsAudioRef.current = audio;
+
+      audio.onended = () => {
+        setTtsPlayingIndex(null);
+        URL.revokeObjectURL(url);
+      };
+      audio.onerror = () => {
+        setTtsPlayingIndex(null);
+        URL.revokeObjectURL(url);
+      };
+
+      setTtsLoadingIndex(null);
+      setTtsPlayingIndex(index);
+      await audio.play();
+    } catch (err) {
+      console.error("TTS play error:", err);
+      setTtsLoadingIndex(null);
+      setTtsPlayingIndex(null);
+    }
+  };
 
   const toggleListening = async () => {
     try {
@@ -188,8 +239,27 @@ export default function ChatWindow({ messages, onAddToCart, onSendMessage, onCon
                         <img alt="Assistant" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBVIabXJxRrTsz2PWJDkfYNmQS3EHsueoGTfIh3TXRmOTUjHDZL-dIC_MC9gvU_Cn3nI5rIU6zN1tImvBVQBAQvQDLrYNOfAEHktNnPF2uhJjS0BQHuIUwgHuKOEtw9U3mgcHCSzfrJmaCk9pw7zve8CzxJrudJ8at_nU7tfLhXm0bV73HFhmMELb7Xk1XC48P5UEskzAWO-gKjfMbe6aKP3QDL8AX3toYQf-bGKr_sHQgZdgwTe5bkJFS9eewGZd4f9c4qY6fz74" />
                       </div>
                     )}
-                    <div className={`${isUser ? 'bg-accent-yellow text-on-secondary-fixed rounded-tr-none' : 'bg-surface-container-lowest text-on-surface rounded-tl-none border border-outline-variant/10 shadow-[0px_4px_12px_rgba(0,0,0,0.05)]'} p-4 rounded-2xl shadow-sm overflow-hidden`}>
+                    <div className={`${isUser ? 'bg-accent-yellow text-on-secondary-fixed rounded-tr-none' : 'bg-surface-container-lowest text-on-surface rounded-tl-none border border-outline-variant/10 shadow-[0px_4px_12px_rgba(0,0,0,0.05)]'} p-4 rounded-2xl shadow-sm overflow-hidden flex flex-col gap-2`}>
                       <p className={`font-body-md leading-relaxed whitespace-pre-wrap ${isUser ? 'font-medium' : ''}`}>{msg.content}</p>
+                      {!isUser && (
+                        <div className="flex items-center justify-end pt-2 mt-1 border-t border-gray-100/80">
+                          <button
+                            onClick={() => handlePlayTTS(msg.content, index)}
+                            disabled={ttsLoadingIndex === index}
+                            title={ttsPlayingIndex === index ? "Stop speaking" : "Read aloud"}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-gray-500 hover:text-deep-purple hover:bg-purple-50/80 transition-all cursor-pointer border border-transparent hover:border-purple-100"
+                          >
+                            {ttsLoadingIndex === index ? (
+                              <span className="material-symbols-outlined text-[16px] animate-spin text-purple-600">progress_activity</span>
+                            ) : ttsPlayingIndex === index ? (
+                              <span className="material-symbols-outlined text-[16px] text-purple-600 animate-pulse">volume_up</span>
+                            ) : (
+                              <span className="material-symbols-outlined text-[16px]">volume_up</span>
+                            )}
+                            <span>{ttsPlayingIndex === index ? 'Speaking...' : ttsLoadingIndex === index ? 'Fetching audio...' : 'Listen'}</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                     {isUser && (
                       <button
