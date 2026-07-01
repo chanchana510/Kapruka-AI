@@ -11,7 +11,16 @@ export default function ChatWindow({ messages, onAddToCart, onSendMessage, onCon
   const audioChunksRef = useRef([]);
   const [ttsLoadingIndex, setTtsLoadingIndex] = useState(null);
   const [ttsPlayingIndex, setTtsPlayingIndex] = useState(null);
+  const [copiedIndex, setCopiedIndex] = useState(null);
   const ttsAudioRef = useRef(null);
+
+  const handleCopyText = (text, index) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIndex(index);
+    setTimeout(() => {
+      setCopiedIndex(prev => (prev === index ? null : prev));
+    }, 2000);
+  };
 
   const handlePlayTTS = async (text, index) => {
     if (ttsPlayingIndex === index && ttsAudioRef.current) {
@@ -242,21 +251,51 @@ export default function ChatWindow({ messages, onAddToCart, onSendMessage, onCon
                     <div className={`${isUser ? 'bg-accent-yellow text-on-secondary-fixed rounded-tr-none' : 'bg-surface-container-lowest text-on-surface rounded-tl-none border border-outline-variant/10 shadow-[0px_4px_12px_rgba(0,0,0,0.05)]'} p-4 rounded-2xl shadow-sm overflow-hidden flex flex-col gap-2`}>
                       <p className={`font-body-md leading-relaxed whitespace-pre-wrap ${isUser ? 'font-medium' : ''}`}>{msg.content}</p>
                       {!isUser && (
-                        <div className="flex items-center justify-end pt-2 mt-1 border-t border-gray-100/80">
+                        <div className="flex items-center justify-start gap-1.5 pt-2 mt-1 border-t border-gray-100/80">
                           <button
                             onClick={() => handlePlayTTS(msg.content, index)}
                             disabled={ttsLoadingIndex === index}
                             title={ttsPlayingIndex === index ? "Stop speaking" : "Read aloud"}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-gray-500 hover:text-deep-purple hover:bg-purple-50/80 transition-all cursor-pointer border border-transparent hover:border-purple-100"
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all cursor-pointer flex items-center justify-center"
                           >
                             {ttsLoadingIndex === index ? (
-                              <span className="material-symbols-outlined text-[16px] animate-spin text-purple-600">progress_activity</span>
+                              <svg className="animate-spin h-4 w-4 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
                             ) : ttsPlayingIndex === index ? (
-                              <span className="material-symbols-outlined text-[16px] text-purple-600 animate-pulse">volume_up</span>
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-purple-600 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                              </svg>
                             ) : (
-                              <span className="material-symbols-outlined text-[16px]">volume_up</span>
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                              </svg>
                             )}
-                            <span>{ttsPlayingIndex === index ? 'Speaking...' : ttsLoadingIndex === index ? 'Fetching audio...' : 'Listen'}</span>
+                          </button>
+                          <button
+                            onClick={() => handleCopyText(msg.content, index)}
+                            title="Copy response"
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all cursor-pointer flex items-center justify-center relative"
+                          >
+                            {copiedIndex === index ? (
+                              <>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                <span className="absolute -top-7 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-[10px] py-0.5 px-1.5 rounded shadow whitespace-nowrap animate-in fade-in zoom-in-95 duration-150 z-20">
+                                  Copied!
+                                </span>
+                              </>
+                            ) : (
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                              </svg>
+                            )}
                           </button>
                         </div>
                       )}

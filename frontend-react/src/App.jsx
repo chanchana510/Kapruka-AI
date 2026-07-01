@@ -32,7 +32,7 @@ function App() {
   });
   const [showTechStack, setShowTechStack] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [isVoiceMode, setIsVoiceMode] = useState(true);
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [shareToast, setShareToast] = useState(false);
   const lastSpokenIdRef = useRef(null);
 
@@ -327,10 +327,22 @@ function App() {
               } catch (e) {}
               setIsVoiceMode(prev => !prev);
             }}
-            title="Toggle Voice"
+            title={isVoiceMode ? "Unmuted: Click to mute auto-play speech" : "Muted: Click to unmute auto-play speech"}
             className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-all cursor-pointer shadow-sm text-white flex-shrink-0"
           >
-            <span className="text-lg">{isVoiceMode ? '🔊' : '🔇'}</span>
+            {isVoiceMode ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <path d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path>
+              </svg>
+            )}
           </button>
           <button
             onClick={() => setShowTechStack(prev => !prev)}
