@@ -242,16 +242,16 @@ export default function ChatWindow({ messages, onAddToCart, onSendMessage, onCon
               const isUser = msg.role === 'user';
               return (
                 <div key={index} className={`flex flex-col gap-2 ${isUser ? 'items-end' : 'items-start'} w-full animate-in fade-in slide-in-from-bottom-4 duration-500`}>
-                  <div className={`group flex items-center gap-4 ${isUser ? 'flex-row-reverse' : ''} max-w-[85%]`}>
+                  <div className={`group flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''} max-w-[85%]`}>
                     {!isUser && (
                       <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-deep-purple shadow-md overflow-hidden border border-white/20">
                         <img alt="Assistant" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBVIabXJxRrTsz2PWJDkfYNmQS3EHsueoGTfIh3TXRmOTUjHDZL-dIC_MC9gvU_Cn3nI5rIU6zN1tImvBVQBAQvQDLrYNOfAEHktNnPF2uhJjS0BQHuIUwgHuKOEtw9U3mgcHCSzfrJmaCk9pw7zve8CzxJrudJ8at_nU7tfLhXm0bV73HFhmMELb7Xk1XC48P5UEskzAWO-gKjfMbe6aKP3QDL8AX3toYQf-bGKr_sHQgZdgwTe5bkJFS9eewGZd4f9c4qY6fz74" />
                       </div>
                     )}
-                    <div className={`${isUser ? 'bg-accent-yellow text-on-secondary-fixed rounded-tr-none' : 'bg-surface-container-lowest text-on-surface rounded-tl-none border border-outline-variant/10 shadow-[0px_4px_12px_rgba(0,0,0,0.05)]'} p-4 rounded-2xl shadow-sm overflow-hidden flex flex-col gap-2`}>
-                      <p className={`font-body-md leading-relaxed whitespace-pre-wrap ${isUser ? 'font-medium' : ''}`}>{msg.content}</p>
+                    <div className={`${isUser ? 'bg-accent-yellow text-on-secondary-fixed rounded-tr-none px-4 py-3' : 'bg-surface-container-lowest text-on-surface rounded-tl-none border border-outline-variant/10 shadow-[0px_4px_12px_rgba(0,0,0,0.05)] px-4 pt-3 pb-2'} rounded-2xl shadow-sm overflow-hidden flex flex-col gap-1`}>
+                      <p className={`font-body-md leading-normal whitespace-pre-wrap ${isUser ? 'font-medium' : ''}`}>{msg.content}</p>
                       {!isUser && (
-                        <div className="flex items-center justify-start gap-1 mt-1 pt-0 bg-transparent opacity-70 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 ease-in-out">
+                        <div className="flex items-center justify-start gap-1 -mt-0.5 pt-0 bg-transparent opacity-70 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 ease-in-out -ml-1">
                           <button
                             onClick={() => handlePlayTTS(msg.content, index)}
                             disabled={ttsLoadingIndex === index}
