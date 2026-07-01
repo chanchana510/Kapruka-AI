@@ -251,12 +251,12 @@ export default function ChatWindow({ messages, onAddToCart, onSendMessage, onCon
                     <div className={`${isUser ? 'bg-accent-yellow text-on-secondary-fixed rounded-tr-none' : 'bg-surface-container-lowest text-on-surface rounded-tl-none border border-outline-variant/10 shadow-[0px_4px_12px_rgba(0,0,0,0.05)]'} p-4 rounded-2xl shadow-sm overflow-hidden flex flex-col gap-2`}>
                       <p className={`font-body-md leading-relaxed whitespace-pre-wrap ${isUser ? 'font-medium' : ''}`}>{msg.content}</p>
                       {!isUser && (
-                        <div className="flex items-center justify-start gap-1.5 pt-2 mt-1 border-t border-gray-100/80">
+                        <div className="flex items-center justify-start gap-1 mt-1 pt-0 bg-transparent opacity-70 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 ease-in-out">
                           <button
                             onClick={() => handlePlayTTS(msg.content, index)}
                             disabled={ttsLoadingIndex === index}
                             title={ttsPlayingIndex === index ? "Stop speaking" : "Read aloud"}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all cursor-pointer flex items-center justify-center"
+                            className="p-1 rounded-md text-gray-400 hover:text-gray-700 hover:bg-black/5 transition-all duration-200 cursor-pointer flex items-center justify-center bg-transparent"
                           >
                             {ttsLoadingIndex === index ? (
                               <svg className="animate-spin h-4 w-4 text-purple-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -279,7 +279,7 @@ export default function ChatWindow({ messages, onAddToCart, onSendMessage, onCon
                           <button
                             onClick={() => handleCopyText(msg.content, index)}
                             title="Copy response"
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all cursor-pointer flex items-center justify-center relative"
+                            className="p-1 rounded-md text-gray-400 hover:text-gray-700 hover:bg-black/5 transition-all duration-200 cursor-pointer flex items-center justify-center bg-transparent relative"
                           >
                             {copiedIndex === index ? (
                               <>
