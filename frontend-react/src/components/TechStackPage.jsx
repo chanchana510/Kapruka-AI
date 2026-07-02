@@ -1,6 +1,16 @@
 import React from 'react';
 
-export default function TechStackPage({ onClose, onTestEasterEgg }) {
+export default function TechStackPage({ onClose, onTestEasterEgg, onNavigateDeveloper }) {
+  const handleDeveloperClick = () => {
+    if (onNavigateDeveloper) {
+      onNavigateDeveloper();
+    } else {
+      window.history.pushState({}, '', '/developer');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      if (onClose) onClose();
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/40 backdrop-blur-sm p-4 sm:p-8 animate-in fade-in duration-300">
       <div className="max-w-4xl w-full bg-white/95 backdrop-blur-md border border-purple-100 shadow-2xl rounded-3xl p-6 sm:p-10 my-auto sm:my-8">
@@ -152,6 +162,36 @@ export default function TechStackPage({ onClose, onTestEasterEgg }) {
             className="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold rounded-xl shadow-lg hover:shadow-orange-500/30 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2"
           >
             <span>Test the Easter Egg 🥚</span>
+          </button>
+        </div>
+
+        {/* Meet the Developer Navigation Section */}
+        <div className="mt-8 pt-6 border-t border-purple-100/80 flex justify-center">
+          <button
+            onClick={handleDeveloperClick}
+            className="group relative inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-white/60 hover:bg-white/95 backdrop-blur-md border border-purple-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:shadow-[0_12px_36px_rgba(147,51,234,0.18)] hover:border-purple-300/80 text-gray-800 font-semibold text-sm sm:text-base transition-all duration-300 ease-out hover:scale-[1.03] active:scale-[0.98] cursor-pointer overflow-hidden"
+          >
+            {/* Apple-style soft glow gradient overlay on hover */}
+            <span className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-amber-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl" />
+
+            {/* Minimalist User Profile + Sparkles Icon */}
+            <div className="relative flex items-center justify-center w-7 h-7 rounded-full bg-purple-50 border border-purple-200/60 text-purple-600 group-hover:scale-110 group-hover:bg-purple-100 transition-all duration-300 flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-purple-500"></span>
+              </span>
+            </div>
+
+            <span className="relative z-10 font-semibold tracking-wide text-slate-800 group-hover:text-purple-950 transition-colors">
+              Meet the Developer
+            </span>
+
+            <svg xmlns="http://www.w3.org/2000/svg" className="relative z-10 w-4 h-4 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
           </button>
         </div>
 

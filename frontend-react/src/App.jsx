@@ -3,6 +3,7 @@ import confetti from 'canvas-confetti';
 import ChatWindow from './components/ChatWindow';
 import CheckoutDrawer from './components/CheckoutDrawer';
 import TechStackPage from './components/TechStackPage';
+import Developer from './components/Developer';
 
 
 /**
@@ -31,10 +32,24 @@ function App() {
     return localStorage.getItem('kapruka_messages') ? false : true;
   });
   const [showTechStack, setShowTechStack] = useState(false);
+  const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [shareToast, setShareToast] = useState(false);
   const lastSpokenIdRef = useRef(null);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateTo = (path) => {
+    window.history.pushState({}, '', path);
+    setCurrentPath(path);
+  };
 
   const speakText = (text) => {
     try {
@@ -394,8 +409,15 @@ function App() {
         {showTechStack && (
           <TechStackPage 
             onClose={() => setShowTechStack(false)} 
-            onTestEasterEgg={handleTestEasterEgg} 
+            onTestEasterEgg={handleTestEasterEgg}
+            onNavigateDeveloper={() => {
+              setShowTechStack(false);
+              navigateTo('/developer');
+            }}
           />
+        )}
+        {currentPath === '/developer' && (
+          <Developer onBack={() => navigateTo('/')} />
         )}
         {/* Main Chat Container - Shrinks when Drawer opens */}
         <div className={`flex-1 transition-all duration-400 ease-in-out relative z-10 ${isCheckoutOpen ? 'md:pr-[400px]' : ''}`}>
