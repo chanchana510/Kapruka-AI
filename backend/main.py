@@ -3,6 +3,7 @@ import tempfile
 import json
 import traceback
 import base64
+import urllib.request
 from typing import List, Dict, Any, Optional
 import io
 from fastapi import FastAPI, HTTPException
@@ -232,10 +233,11 @@ def parse_kapruka_markdown(markdown_text: str) -> List[Dict[str, str]]:
         if not name_match:
             continue
         name = name_match.group(1).strip()
+        name = re.sub(r'^\d+\.\s*', '', name).strip()
         
-        price_match = re.search(r'([\d,]+(?:\.\d+)?)\s*(?:LKR|Rs\.?)', entry, re.IGNORECASE)
+        price_match = re.search(r'(?:LKR|Rs\.?)\s*([\d,]+(?:\.\d+)?)', entry, re.IGNORECASE)
         if not price_match:
-            price_match = re.search(r'(?:Rs\.?|LKR)\s*([\d,]+(?:\.\d+)?)', entry, re.IGNORECASE)
+            price_match = re.search(r'([\d,]+(?:\.\d+)?)\s*(?:LKR|Rs\.?)', entry, re.IGNORECASE)
         price = price_match.group(1).replace(',', '').strip() if price_match else "0"
         
         link_match = re.search(r'\[.*?\]\((https?://[^\)]+)\)', entry)
@@ -397,32 +399,61 @@ CRITICAL RULE: STRICT LANGUAGE CONSISTENCY & NO CODE-SWITCHING
                                     if fn.name == "kapruka_search_products":
                                         extracted_products = parse_kapruka_markdown(result_text)
                                         
+                                        def fetch_fallback_image(url):
+                                            if not url:
+                                                return None
+                                            try:
+                                                req = urllib.request.Request(
+                                                    url, 
+                                                    headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+                                                )
+                                                with urllib.request.urlopen(req, timeout=4) as response:
+                                                    html = response.read().decode('utf-8', errors='ignore')
+                                                    og_img = re.search(r'<meta[^>]*property=["\']og:image["\'][^>]*content=["\']([^"\']+)["\']', html, re.I)
+                                                    if not og_img:
+                                                        og_img = re.search(r'<meta[^>]*content=["\']([^"\']+)["\'][^>]*property=["\']og:image["\']', html, re.I)
+                                                    if og_img:
+                                                        return og_img.group(1).strip()
+                                                    imgs = re.findall(r'https://[^\s"\'>]+(?:productImages|assets/images/product|static2\.kapruka\.com)[^\s"\'>]+\.(?:jpg|jpeg|png|webp)', html, re.I)
+                                                    if imgs:
+                                                        return imgs[0]
+                                            except Exception:
+                                                pass
+                                            return None
+
                                         async def resolve_product_image(session, prod_dict):
-                                            for attempt in range(3):
+                                            prod_dict["image"] = None
+                                            for attempt in range(2):
                                                 try:
                                                     detail_result = await session.call_tool("kapruka_get_product", arguments={"params": {"product_id": prod_dict["id"]}})
                                                     detail_text = detail_result.content[0].text if detail_result.content else ""
                                                     if "rate limit" in detail_text.lower() or "500" in detail_text.lower():
-                                                        await asyncio.sleep(0.4 * (attempt + 1))
+                                                        await asyncio.sleep(0.3 * (attempt + 1))
                                                         continue
                                                     img_match = re.search(r'!\[.*?\]\((.*?)\)', detail_text)
                                                     if not img_match:
                                                         img_match = re.search(r'(https?://[^\s]+(?:\.jpg|\.jpeg|\.png|\.webp|\.gif)[^\s]*)', detail_text, re.IGNORECASE)
                                                     if img_match:
                                                         prod_dict["image"] = img_match.group(1).strip().rstrip(')]}')
-                                                    else:
-                                                        prod_dict["image"] = None
-                                                    break
+                                                        break
                                                 except Exception:
-                                                    prod_dict["image"] = None
-                                                    await asyncio.sleep(0.3)
-                                            print(f"[IMAGE TRACE] ID: {prod_dict['id']} -> URL: {prod_dict['image']}")
+                                                    await asyncio.sleep(0.2)
+                                            
+                                            if not prod_dict.get("image") and prod_dict.get("link"):
+                                                try:
+                                                    fallback_img = await asyncio.to_thread(fetch_fallback_image, prod_dict["link"])
+                                                    if fallback_img:
+                                                        prod_dict["image"] = fallback_img
+                                                except Exception:
+                                                    pass
+                                            
+                                            print(f"[IMAGE TRACE] ID: {prod_dict.get('id')} -> URL: {prod_dict.get('image')}")
                                             return prod_dict
 
-                                        for p in extracted_products[:5]:
+                                        for p in extracted_products[:6]:
                                             await resolve_product_image(session, p)
-                                            await asyncio.sleep(0.3)
-                                        for p in extracted_products[5:]:
+                                            await asyncio.sleep(0.2)
+                                        for p in extracted_products[6:]:
                                             p["image"] = None
                                             
                         except FileNotFoundError as fnf_err:
