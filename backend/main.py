@@ -233,11 +233,13 @@ def parse_kapruka_markdown(markdown_text: str) -> List[Dict[str, str]]:
         link_match = re.search(r'\[.*?\]\((https?://[^\)]+)\)', entry)
         link = link_match.group(1) if link_match else ""
         
-        id_match = re.search(r'ID:\s*([A-Za-z0-9_-]+)', entry, re.IGNORECASE)
+        id_match = re.search(r'ID:\s*`?([A-Za-z0-9_-]+)`?', entry, re.IGNORECASE)
+        if not id_match and link:
+            id_match = re.search(r'/kid/([A-Za-z0-9_-]+)', link, re.IGNORECASE)
         if not id_match:
             id_match = re.search(r'\b([A-Z0-9]+_[A-Z0-9_]+)\b', entry)
         
-        prod_id = id_match.group(1) if id_match else f"prod_{len(products)+1}"
+        prod_id = id_match.group(1).strip() if id_match else f"prod_{len(products)+1}"
         
         products.append({
             "id": prod_id,
@@ -278,7 +280,8 @@ CRITICAL RULE 1: STRICT LANGUAGE MIRRORING & NATURAL CONVERSATION
 
 CRITICAL RULE 2: TOOL USAGE
 - BROAD QUERIES (NO TOOLS): If the user asks for general ideas (e.g., "gift for GF", "monada denna hoda"), DO NOT call search tools. Suggest 2-3 categories from your knowledge matching the USER'S LANGUAGE.
-- SPECIFIC QUERIES (USE SEARCH): ONLY invoke `kapruka_search_products` when a specific item is named (e.g., "red frock", "chocolate cake"). Keep your text reply to 1 short sentence.
+- SPECIFIC QUERIES (USE SEARCH): ONLY invoke `kapruka_search_products` when a specific item is named (e.g., "red frock", "chocolate cake", "malak"). Keep your text reply to 1 short sentence.
+- ENGLISH TRANSLATION FOR SEARCH: When invoking `kapruka_search_products`, you MUST translate any Sinhala or Singlish query keywords into English first! E.g., if the user says "malak" or "mal ganna oni", invoke `kapruka_search_products(q="flowers")`. If "keek ekak", invoke `kapruka_search_products(q="cake")`. Never pass Sinhala/Singlish words directly to `q` because the product catalog is strictly indexed in English.
 
 CRITICAL RULE 3: CATEGORY LINKS
 - If suggesting a category, NEVER use standard markdown links. Secretly append this tag at the end of your text: `[CATEGORY: Name|https://url...]`. Our backend will extract it.
@@ -387,23 +390,31 @@ CRITICAL RULE: STRICT LANGUAGE CONSISTENCY & NO CODE-SWITCHING
                                         extracted_products = parse_kapruka_markdown(result_text)
                                         
                                         async def resolve_product_image(session, prod_dict):
-                                            try:
-                                                detail_result = await session.call_tool("kapruka_get_product", arguments={"params": {"product_id": prod_dict["id"]}})
-                                                detail_text = detail_result.content[0].text if detail_result.content else ""
-                                                img_match = re.search(r'!\[.*?\]\((.*?)\)', detail_text)
-                                                if not img_match:
-                                                    img_match = re.search(r'(https?://[^\s]+(?:\.jpg|\.jpeg|\.png|\.webp|\.gif)[^\s]*)', detail_text, re.IGNORECASE)
-                                                if img_match:
-                                                    prod_dict["image"] = img_match.group(1).strip().rstrip(')]}')
-                                                else:
+                                            for attempt in range(3):
+                                                try:
+                                                    detail_result = await session.call_tool("kapruka_get_product", arguments={"params": {"product_id": prod_dict["id"]}})
+                                                    detail_text = detail_result.content[0].text if detail_result.content else ""
+                                                    if "rate limit" in detail_text.lower() or "500" in detail_text.lower():
+                                                        await asyncio.sleep(0.4 * (attempt + 1))
+                                                        continue
+                                                    img_match = re.search(r'!\[.*?\]\((.*?)\)', detail_text)
+                                                    if not img_match:
+                                                        img_match = re.search(r'(https?://[^\s]+(?:\.jpg|\.jpeg|\.png|\.webp|\.gif)[^\s]*)', detail_text, re.IGNORECASE)
+                                                    if img_match:
+                                                        prod_dict["image"] = img_match.group(1).strip().rstrip(')]}')
+                                                    else:
+                                                        prod_dict["image"] = None
+                                                    break
+                                                except Exception:
                                                     prod_dict["image"] = None
-                                            except Exception:
-                                                prod_dict["image"] = None
+                                                    await asyncio.sleep(0.3)
                                             print(f"📷 [IMAGE TRACE] ID: {prod_dict['id']} -> URL: {prod_dict['image']}")
                                             return prod_dict
 
-                                        await asyncio.gather(*[resolve_product_image(session, p) for p in extracted_products[:4]])
-                                        for p in extracted_products[4:]:
+                                        for p in extracted_products[:5]:
+                                            await resolve_product_image(session, p)
+                                            await asyncio.sleep(0.3)
+                                        for p in extracted_products[5:]:
                                             p["image"] = None
                                             
                         except FileNotFoundError as fnf_err:

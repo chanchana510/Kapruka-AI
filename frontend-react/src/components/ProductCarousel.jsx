@@ -18,11 +18,8 @@ export default function ProductCarousel({ products, onAdd }) {
 
   if (!products || !Array.isArray(products) || products.length === 0) return null;
 
-  const validProducts = products.filter((product, idx) => {
-    if (!product || !isValidImageUrl(product.image)) return false;
-    const id = product.id || idx;
-    if (failedImageIds.has(id)) return false;
-    return true;
+  const validProducts = products.filter((product) => {
+    return product && (product.name || product.link);
   });
 
   if (validProducts.length === 0) return null;

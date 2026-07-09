@@ -10,22 +10,31 @@ const isValidImageUrl = (url) => {
 export default function ProductCard({ product, onAdd, onImageError }) {
   const [imgFailed, setImgFailed] = useState(false);
 
-  if (!product || !isValidImageUrl(product.image) || imgFailed) {
+  if (!product || (!product.name && !product.link)) {
     return null;
   }
 
+  const hasImage = isValidImageUrl(product.image) && !imgFailed;
+
   return (
     <div className="min-w-[280px] md:min-w-[320px] bg-white/80 backdrop-blur-md rounded-2xl overflow-hidden shadow-lg border border-white/40 flex flex-col group cursor-pointer hover:shadow-xl transition-all font-sans">
-      <div className="relative h-48 w-full bg-gray-100">
-        <img 
-          alt={product.name || 'Product'} 
-          className="w-full h-full object-cover rounded-t-2xl transition-transform duration-300 group-hover:scale-105" 
-          src={product.image} 
-          onError={(e) => {
-            setImgFailed(true);
-            if (onImageError) onImageError(e);
-          }}
-        />
+      <div className="relative h-48 w-full bg-gradient-to-br from-purple-100 to-indigo-50 flex items-center justify-center">
+        {hasImage ? (
+          <img 
+            alt={product.name || 'Product'} 
+            className="w-full h-full object-cover rounded-t-2xl transition-transform duration-300 group-hover:scale-105" 
+            src={product.image} 
+            onError={(e) => {
+              setImgFailed(true);
+              if (onImageError) onImageError(e);
+            }}
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center text-deep-purple/60 p-4 text-center">
+            <span className="material-symbols-outlined text-4xl mb-1">shopping_bag</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">Kapruka Item</span>
+          </div>
+        )}
         <button 
           onClick={(e) => { e.stopPropagation(); onAdd(product, e); }}
           className="absolute bottom-3 right-3 w-10 h-10 bg-deep-purple/90 backdrop-blur-md text-white rounded-full flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform border border-white/20 cursor-pointer"
