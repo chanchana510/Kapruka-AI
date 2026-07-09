@@ -13,6 +13,12 @@ from pydantic import BaseModel
 import google.generativeai as genai
 from dotenv import load_dotenv
 import sys
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 import shutil
 import re
 import asyncio
@@ -42,14 +48,14 @@ def resolve_and_verify_command(raw_command: str) -> str:
         # 1 & 2. Verification & Logging for script paths / files
         if not os.path.exists(resolved_path):
             error_msg = f"MCP tool command not found: {raw_command} (resolved path: {resolved_path})"
-            print(f"❌ [MCP ERROR] {error_msg}")
+            print(f"[MCP ERROR] {error_msg}")
             raise FileNotFoundError(error_msg)
     else:
         # 1 & 2. Verification & Logging for commands in system PATH
         resolved_path = shutil.which(raw_command)
         if not resolved_path:
             warning_msg = "MCP tool executable (npx) not found. Ensure Node.js is installed."
-            print(f"⚠️ [WARNING] {warning_msg}")
+            print(f"[WARNING] {warning_msg}")
             raise FileNotFoundError(warning_msg)
             
     return resolved_path
@@ -76,17 +82,17 @@ async def safe_stdio_client(server_params: StdioServerParameters):
         resolved_command = resolve_and_verify_command(server_params.command)
         server_params.command = resolved_command
     except FileNotFoundError as e:
-        print("⚠️ [WARNING] MCP tool executable (npx) not found. Ensure Node.js is installed.")
+        print("[WARNING] MCP tool executable (npx) not found. Ensure Node.js is installed.")
         raise e
 
     # 4. Debug Logging: Log the absolute path just before initializing the client
-    print(f"🔍 [MCP DEBUG] Initializing stdio_client executing command at absolute path: {server_params.command} | Args: {server_params.args}")
+    print(f"[MCP DEBUG] Initializing stdio_client executing command at absolute path: {server_params.command} | Args: {server_params.args}")
     
     try:
         async with stdio_client(server_params) as (read_stream, write_stream):
             yield read_stream, write_stream
     except FileNotFoundError as fnf:
-        print("⚠️ [WARNING] MCP tool executable (npx) not found. Ensure Node.js is installed.")
+        print("[WARNING] MCP tool executable (npx) not found. Ensure Node.js is installed.")
         raise FileNotFoundError("MCP tool executable (npx) not found. Ensure Node.js is installed.") from fnf
 
 
@@ -101,9 +107,9 @@ if gcp_creds_json:
             temp_creds_file.write(gcp_creds_json)
             temp_creds_path = temp_creds_file.name
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_creds_path
-        print(f"🔒 [GCP CREDENTIALS] Successfully loaded GOOGLE_CREDENTIALS_JSON into temp file: {temp_creds_path}")
+        print(f"[GCP CREDENTIALS] Successfully loaded GOOGLE_CREDENTIALS_JSON into temp file: {temp_creds_path}")
     except Exception as e:
-        print(f"⚠️ [WARNING] Failed to write GOOGLE_CREDENTIALS_JSON to temp file: {e}")
+        print(f"[WARNING] Failed to write GOOGLE_CREDENTIALS_JSON to temp file: {e}")
 
 # Configure Gemini
 api_keys_env = os.getenv("GEMINI_API_KEYS")
@@ -377,7 +383,7 @@ CRITICAL RULE: STRICT LANGUAGE CONSISTENCY & NO CODE-SWITCHING
                         if "max_price" in mcp_arguments and mcp_arguments["max_price"] is not None:
                             mcp_arguments["max_price"] = int(mcp_arguments["max_price"])
 
-                        print(f"\n🚀 [DEBUG] ESTABLISHING MCP BRIDGE | TOOL: {fn.name} | ARGS: {mcp_arguments}")
+                        print(f"\n[DEBUG] ESTABLISHING MCP BRIDGE | TOOL: {fn.name} | ARGS: {mcp_arguments}")
 
                         result_text = "No results found."
                         try:
@@ -410,7 +416,7 @@ CRITICAL RULE: STRICT LANGUAGE CONSISTENCY & NO CODE-SWITCHING
                                                 except Exception:
                                                     prod_dict["image"] = None
                                                     await asyncio.sleep(0.3)
-                                            print(f"📷 [IMAGE TRACE] ID: {prod_dict['id']} -> URL: {prod_dict['image']}")
+                                            print(f"[IMAGE TRACE] ID: {prod_dict['id']} -> URL: {prod_dict['image']}")
                                             return prod_dict
 
                                         for p in extracted_products[:5]:
@@ -420,10 +426,10 @@ CRITICAL RULE: STRICT LANGUAGE CONSISTENCY & NO CODE-SWITCHING
                                             p["image"] = None
                                             
                         except FileNotFoundError as fnf_err:
-                            print("⚠️ [WARNING] MCP tool executable (npx) not found. Ensure Node.js is installed.")
+                            print("[WARNING] MCP tool executable (npx) not found. Ensure Node.js is installed.")
                             result_text = "MCP tool executable (npx) not found. Ensure Node.js is installed."
                         except Exception as e:
-                            print(f"🚨 [DEBUG] Bridge Exception: {str(e)}")
+                            print(f"[DEBUG] Bridge Exception: {str(e)}")
                             traceback.print_exc()
                             result_text = f"Failed to connect via mcp-remote: {str(e)}"
 
@@ -537,17 +543,17 @@ async def search_cities(q: str = ""):
                 
                 return {"cities": list(set(cleaned_cities))}
     except FileNotFoundError as fnf_err:
-        print("⚠️ [WARNING] MCP tool executable (npx) not found. Ensure Node.js is installed.")
+        print("[WARNING] MCP tool executable (npx) not found. Ensure Node.js is installed.")
         return {"cities": []}
     except Exception as e:
-        print(f"🚨 Safe City Catch: {str(e)}")
+        print(f"Safe City Catch: {str(e)}")
         return {"cities": []}
     except BaseException as be:
-        # 🚨 BaseExceptionGroup Catch
+        # BaseExceptionGroup Catch
         # Asynchronous context managers (like `stdio_client` and `ClientSession` using AnyIO) 
         # can occasionally throw BaseExceptionGroups when cancelling multiple concurrent tasks.
         # We explicitly catch `BaseException` to prevent the entire ASGI worker from terminating.
-        print(f"🚨 System Exception Group Catch")
+        print(f"System Exception Group Catch")
         return {"cities": []}
 
 @app.post("/check-delivery")
@@ -578,7 +584,7 @@ async def check_delivery_endpoint(request: CheckDeliveryRequest):
                 mcp_result = await session.call_tool("kapruka_check_delivery", arguments=wrapped_params)
                 raw_delivery_text = mcp_result.content[0].text if mcp_result.content else ""
                 
-                print(f"🚚 [DEBUG] KAPRUKA DELIVERY RAW OUTPUT: {raw_delivery_text}")
+                print(f"[DEBUG] KAPRUKA DELIVERY RAW OUTPUT: {raw_delivery_text}")
                 
                 # Robust Regex Extraction
                 rate_match = re.search(r'(?:LKR|Rs\.?|Rate:?)\s*([\d,]+(?:\.\d+)?)', raw_delivery_text, re.IGNORECASE)
@@ -591,18 +597,18 @@ async def check_delivery_endpoint(request: CheckDeliveryRequest):
                     except ValueError:
                         delivery_fee = 450
                 else:
-                    print("⚠️ [DEBUG] Could not extract numeric rate, defaulting to 450")
+                    print("[DEBUG] Could not extract numeric rate, defaulting to 450")
                     delivery_fee = 450
                     
                 return {"delivery_fee": delivery_fee, "rate": delivery_fee, "raw": raw_delivery_text}
     except FileNotFoundError as fnf_err:
-        print("⚠️ [WARNING] MCP tool executable (npx) not found. Ensure Node.js is installed.")
+        print("[WARNING] MCP tool executable (npx) not found. Ensure Node.js is installed.")
         return {"delivery_fee": 450, "rate": 450, "raw": ""}
     except Exception as e:
-        print(f"🚨 Safe Delivery Catch: {str(e)}")
+        print(f"Safe Delivery Catch: {str(e)}")
         return {"delivery_fee": 450, "rate": 450, "raw": ""}
     except BaseException as be:
-        print(f"🚨 System Exception Group Catch (Delivery)")
+        print(f"System Exception Group Catch (Delivery)")
         return {"delivery_fee": 450, "rate": 450, "raw": ""}
 
 @app.post("/create-order")
@@ -621,7 +627,7 @@ async def create_order_endpoint(request: CreateOrderRequest):
                 payment_url = url_match.group(1) if url_match else None
                 return {"payment_url": payment_url, "raw": result_text}
     except FileNotFoundError as fnf_err:
-        print("⚠️ [WARNING] MCP tool executable (npx) not found. Ensure Node.js is installed.")
+        print("[WARNING] MCP tool executable (npx) not found. Ensure Node.js is installed.")
         return {"error": "MCP tool executable (npx) not found. Ensure Node.js is installed."}
     except Exception as e:
         traceback.print_exc()
